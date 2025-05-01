@@ -2,7 +2,7 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from app.core.redis_client import redis_client
+from backend.app.core.redis_client import redis_client
 import os
 
 

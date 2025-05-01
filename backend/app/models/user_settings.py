@@ -1,7 +1,7 @@
 # app/models/user_settings.py
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from backend.app.db.base import Base
 
 class UserSettings(Base):
     __tablename__ = "user_settings"

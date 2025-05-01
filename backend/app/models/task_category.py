@@ -1,7 +1,7 @@
 # app/models/task_category.py
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from backend.app.db.base import Base
 
 class TaskCategory(Base):
     __tablename__ = "task_categories"

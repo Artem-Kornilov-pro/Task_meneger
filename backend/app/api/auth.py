@@ -3,13 +3,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from app.chemas.user import UserCreate, UserOut, LoginRequest, TokenResponse, TokenRequest
-from app.models.user import User
-from app.db.session import get_db
-from app.core.security import hash_password, create_access_token, verify_password
+from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, TokenResponse, TokenRequest
+from backend.app.models.user import User
+from backend.app.db.session import get_db
+from backend.app.core.security import hash_password, create_access_token, verify_password
     
-from app.core.redis_client import redis_client
-from app.core.security import verify_token  # твоя функция для декодирования токена, нужна чтобы проверить токен
+from backend.app.core.redis_client import redis_client
+from backend.app.core.security import verify_token  # твоя функция для декодирования токена, нужна чтобы проверить токен
 from typing import Optional
 
 

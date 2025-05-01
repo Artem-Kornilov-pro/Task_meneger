@@ -26,13 +26,27 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str = Field(..., description="JWT токен доступа", example="your.jwt.token.here")
+    access_token: str = Field(..., description="JWT токен доступа", example="your.acsess.jwt.token.here")
+    refresh_token: str = Field(..., description="JWT токен доступа", example="your.refresh.jwt.token.here")
     token_type: str = Field(..., description="Тип токена", example="bearer")
     class Config:
         from_attributes = True  # <<< ВАЖНО
 
 
-
 # Модель для тела запроса
 class TokenRequest(BaseModel):
     token: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., title="Refresh Token", example="your.refresh.token.here")
+
+class AccessTokenResponse(BaseModel):
+    access_token: str = Field(..., title="Access Token", example="new.access.token.here")
+    token_type: str = Field(default="bearer", title="Token Type", example="bearer")
+
+
+class UserOutMe(BaseModel):
+    id: int = Field(..., example=1, title="User ID")
+    email: EmailStr = Field(..., example="user@example.com", title="Email")
+    username: str = Field(..., example="johndoe", title="Username")

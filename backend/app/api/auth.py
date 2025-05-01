@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, TokenResponse, TokenRequest
+from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, TokenResponse, TokenRequest, AccessTokenResponse, RefreshTokenRequest, UserOutMe
 from backend.app.models.user import User
 from backend.app.db.session import get_db
 from backend.app.core.security import hash_password, create_access_token, verify_password
@@ -141,3 +141,50 @@ async def logout(token_request: TokenRequest):
         return {"detail": "Token deleted successfully"}
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
+    
+
+
+@router.post("/refresh", response_model=AccessTokenResponse, summary="Обновить access токен по refresh токену")
+def refresh_access_token(data: RefreshTokenRequest):
+    """
+    🔁 Обновление access токена на основе предоставленного refresh токена.
+
+    проверка refresh токена и генерация нового access токена.
+    """
+    # Заглушка: не проверяет токен, просто возвращает фиктивный access_token
+    if not data.refresh_token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Refresh токен отсутствует")
+    
+    return AccessTokenResponse(
+        access_token="mocked.new.access.token.123456",
+        token_type="bearer"
+    )
+
+
+
+
+
+
+@router.get(
+    "/me",
+    response_model=UserOutMe,
+    summary="Получить текущего пользователя (токен вводится вручную)"
+)
+def get_current_user(authorization: Optional[str] = Header(None, description="JWT токен формата: Bearer <token>")):
+    """
+    👤 Заглушка: возвращает пользователя, если передан заголовок Authorization.
+
+    **Пример:**
+    ```
+    Authorization: Bearer eyJhbGciOi...
+    ```
+    """
+    if not authorization:
+        # Здесь может быть raise HTTPException, но пока заглушка
+        return UserOutMe(id=0, email="anonymous@example.com", username="anonymous")
+
+    return UserOutMe(
+        id=1,
+        email="user@example.com",
+        username="johndoe"
+    )

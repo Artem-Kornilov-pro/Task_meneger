@@ -47,9 +47,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(ping.router, tags=["server"])
-app.include_router(auth.router, tags=["auth"])
-
+app.include_router(ping.router,prefix="/server", tags=["server"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 #Для запуска проекта использовать :  uvicorn backend.app.main:app --reload
 

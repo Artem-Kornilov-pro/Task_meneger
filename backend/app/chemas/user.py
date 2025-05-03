@@ -25,7 +25,7 @@ class LoginRequest(BaseModel):
     password: PasswordType
 
 
-class TokenResponse(BaseModel):
+class LogInTokenResponse(BaseModel):
     access_token: str = Field(..., description="JWT токен доступа", example="your.acsess.jwt.token.here")
     refresh_token: str = Field(..., description="JWT токен доступа", example="your.refresh.jwt.token.here")
     token_type: str = Field(..., description="Тип токена", example="bearer")

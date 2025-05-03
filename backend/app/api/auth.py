@@ -3,10 +3,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, TokenResponse, TokenRequest, AccessTokenResponse, RefreshTokenRequest, UserOutMe
+from jose import JWTError
+from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, LogInTokenResponse, TokenRequest
+from backend.app.chemas.user import AccessTokenResponse, RefreshTokenRequest, UserOutMe
 from backend.app.models.user import User
 from backend.app.db.session import get_db
-from backend.app.core.security import hash_password, create_access_token, verify_password
+from backend.app.core.security import hash_password, create_token, verify_password
     
 from backend.app.core.redis_client import redis_client
 from backend.app.core.security import verify_token  # твоя функция для декодирования токена, нужна чтобы проверить токен
@@ -76,7 +78,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
 
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LogInTokenResponse)
 def login(user_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Аутентификация пользователя и генерация JWT токена доступа.
@@ -110,8 +112,11 @@ def login(user_data: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    access_token = create_access_token(data={"sub": str(user.id)})
-    resp = TokenResponse(access_token=access_token,
+    access_token = create_token(data={"sub": str(user.id)}, token_type="access")
+    refresh_token = create_token(data={"sub": str(user.id)}, token_type="refresh")
+
+    resp = LogInTokenResponse(access_token=access_token,
+                              refresh_token=refresh_token,
                           token_type="bearer")
     return resp
 
@@ -141,50 +146,92 @@ async def logout(token_request: TokenRequest):
         return {"detail": "Token deleted successfully"}
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
-    
-
 
 @router.post("/refresh", response_model=AccessTokenResponse, summary="Обновить access токен по refresh токену")
 def refresh_access_token(data: RefreshTokenRequest):
     """
-    🔁 Обновление access токена на основе предоставленного refresh токена.
-
-    проверка refresh токена и генерация нового access токена.
-    """
-    # Заглушка: не проверяет токен, просто возвращает фиктивный access_token
-    if not data.refresh_token:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Refresh токен отсутствует")
+    🔁 Обновляет access токен по действующему refresh токену.
     
-    return AccessTokenResponse(
-        access_token="mocked.new.access.token.123456",
-        token_type="bearer"
-    )
+    Проверяет:
+    - подпись и срок действия refresh токена
+    - наличие токена в Redis
+    - корректность типа токена
+
+    Возвращает новый access токен.
+    """
+    refresh_token = data.refresh_token.strip()
+
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail="Refresh токен не предоставлен")
+
+    try:
+        # Проверка и расшифровка токена
+        payload = verify_token(refresh_token)
+
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=400, detail="Передан не refresh токен")
+
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Не удалось извлечь user_id из токена")
+
+        # Генерация нового access токена
+        new_access_token = create_token({"sub": user_id}, token_type="access")
+
+        return AccessTokenResponse(
+            access_token=new_access_token,
+            token_type="bearer"
+        )
+
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Невалидный refresh токен: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 
 
+
+
+
+# Создаем зависимость для получения токена из заголовков
+def get_token(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=400, detail="Invalid token format")
+    return authorization[7:]  # Возвращаем только сам токен без "Bearer "
 
 
 
 @router.get(
     "/me",
     response_model=UserOutMe,
-    summary="Получить текущего пользователя (токен вводится вручную)"
+    summary="Получить текущего пользователя (токен без Bearer)"
 )
-def get_current_user(authorization: Optional[str] = Header(None, description="JWT токен формата: Bearer <token>")):
+def get_current_user(token: str = Depends(get_token)):
     """
-    👤 Заглушка: возвращает пользователя, если передан заголовок Authorization.
+    👤 Возвращает информацию о текущем пользователе по токену. 
+    Работает как с префиксом Bearer, так и без него.
 
-    **Пример:**
-    ```
-    Authorization: Bearer eyJhbGciOi...
-    ```
+    Пример:
+    Authorization: Bearer eyJhbGciOi...  (или просто eyJhbGciOi...)
     """
-    if not authorization:
-        # Здесь может быть raise HTTPException, но пока заглушка
-        return UserOutMe(id=0, email="anonymous@example.com", username="anonymous")
+    #if not Authorization:
+    
+    #    raise HTTPException(status_code=401, detail="Отсутствует заголовок Authorization")
 
-    return UserOutMe(
-        id=1,
-        email="user@example.com",
-        username="johndoe"
-    )
+    #token = Authorization.strip()
+
+    # удаляем "Bearer ", если есть
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+
+    try:
+        payload = verify_token(token)
+        user_id = payload.get("sub")
+        username = payload.get("username", "anonymous")
+        email = payload.get("email", "anonymous@example.com")
+
+        return UserOutMe(id=int(user_id), email=email, username=username)
+
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Невалидный токен: {str(e)}")
+

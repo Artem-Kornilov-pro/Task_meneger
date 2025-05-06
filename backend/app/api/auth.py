@@ -2,21 +2,24 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError
 from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, LogInTokenResponse, TokenRequest
 from backend.app.chemas.user import AccessTokenResponse, RefreshTokenRequest, UserOutMe
+
 from backend.app.models.user import User
+from backend.app.models.user_profile import UserProfile
 from backend.app.db.session import get_db
 from backend.app.core.security import hash_password, create_token, verify_password
     
 from backend.app.core.redis_client import redis_client
 from backend.app.core.security import verify_token  # твоя функция для декодирования токена, нужна чтобы проверить токен
-from typing import Optional
 
+from backend.app.core.dependencies import get_current_user
 
 # Описываем, что нам нужен токен через OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # путь на получение токена можешь поставить любой
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # путь на получение токена можешь поставить любой
 
 
 router = APIRouter()
@@ -77,50 +80,47 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-
-@router.post("/login", response_model=LogInTokenResponse)
-def login(user_data: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/login", response_model=LogInTokenResponse, summary="Авторизация пользователя")
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
     """
-    Аутентификация пользователя и генерация JWT токена доступа.
+    Эндпоинт для авторизации пользователя. При успешной авторизации возвращает
+    access и refresh токены для дальнейшей работы с защищенными ресурсами.
 
-    Принимает учётные данные пользователя (имя пользователя и пароль), 
-    проверяет их на соответствие данным в базе данных. 
-    В случае успешной аутентификации создаёт JWT токен, который можно использовать для доступа к защищённым маршрутам.
+    Параметры:
+    - form_data: OAuth2PasswordRequestForm
+      - username: Имя пользователя, используемое для входа.
+      - password: Пароль пользователя для проверки.
+    - db: Сессия базы данных, необходимая для получения данных о пользователе.
 
-    Аргументы:
-        user_data (LoginRequest): Учётные данные пользователя, содержащие:
-            - username: уникальное имя пользователя,
-            - password: пароль в открытом виде (будет проверяться через хэш).
-        db (Session): Сессия базы данных для выполнения поиска пользователя и проверки пароля.
-
-    Возвращает:
-        dict: Словарь с данными:
-            - access_token (str): JWT токен для аутентифицированных запросов,
-            - token_type (str): Тип токена, всегда "bearer".
-
+    Возвращаемое значение:
+    - LogInTokenResponse: Ответ, содержащий access_token, refresh_token и token_type.
+    
     Исключения:
-        HTTPException:
-            - 400 Bad Request — если имя пользователя не существует или пароль неверный.
-
-    Примечания:
-        - Пароль проверяется с использованием безопасного метода верификации (например, bcrypt).
-        - Сгенерированный JWT токен включает ID пользователя в поле 'sub'.
-        - Для доступа к защищённым маршрутам необходимо указывать токен в заголовке Authorization.
-        - Обычно токен имеет срок действия, который задаётся при его создании.
+    - HTTPException (400): В случае неверного имени пользователя или пароля.
+    
+    Пример успешного ответа:
+    {
+        "access_token": "string",
+        "refresh_token": "string",
+        "token_type": "bearer"
+    }
     """
-    user = db.query(User).filter(User.username == user_data.username).first()
-    if not user or not verify_password(user_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+    user = db.query(User).filter(User.username == form_data.username).first()
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Неверное имя пользователя или пароль")
 
     access_token = create_token(data={"sub": str(user.id)}, token_type="access")
     refresh_token = create_token(data={"sub": str(user.id)}, token_type="refresh")
 
-    resp = LogInTokenResponse(access_token=access_token,
-                              refresh_token=refresh_token,
-                          token_type="bearer")
-    return resp
-
-
+    return LogInTokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer"
+    )
 
 
 @router.delete("/logout")
@@ -189,10 +189,6 @@ def refresh_access_token(data: RefreshTokenRequest):
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 
-
-
-
-
 # Создаем зависимость для получения токена из заголовков
 def get_token(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
@@ -201,37 +197,27 @@ def get_token(authorization: str = Header(...)):
 
 
 
-@router.get(
-    "/me",
-    response_model=UserOutMe,
-    summary="Получить текущего пользователя (токен без Bearer)"
-)
-def get_current_user(token: str = Depends(get_token)):
+@router.get("/me",response_model=UserOutMe, summary="Информация о текущем пользователе")
+def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
-    👤 Возвращает информацию о текущем пользователе по токену. 
-    Работает как с префиксом Bearer, так и без него.
+    Получение информации о текущем авторизованном пользователе.
 
-    Пример:
-    Authorization: Bearer eyJhbGciOi...  (или просто eyJhbGciOi...)
+    Эндпоинт возвращает основные данные пользователя (ID, email, username) на основе ID,
+    извлечённого из JWT-токена доступа. Запрос выполняется к базе данных по ID пользователя.
+
+    Требуется передача токена доступа в заголовке Authorization формата: `Bearer <token>`.
+
+    Возвращает:
+        UserOut: Объект с основной информацией о пользователе без чувствительных данных
+        (например, без хэша пароля).
+
+    Исключения:
+        - 401 Unauthorized — если токен недействителен или отсутствует.
+        - 404 Not Found — если пользователь с таким ID не найден в базе данных.
     """
-    #if not Authorization:
+    user_id = current_user["user_id"]
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
     
-    #    raise HTTPException(status_code=401, detail="Отсутствует заголовок Authorization")
-
-    #token = Authorization.strip()
-
-    # удаляем "Bearer ", если есть
-    if token.lower().startswith("bearer "):
-        token = token[7:].strip()
-
-    try:
-        payload = verify_token(token)
-        user_id = payload.get("sub")
-        username = payload.get("username", "anonymous")
-        email = payload.get("email", "anonymous@example.com")
-
-        return UserOutMe(id=int(user_id), email=email, username=username)
-
-    except JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Невалидный токен: {str(e)}")
-

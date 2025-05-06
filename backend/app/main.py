@@ -1,21 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.openapi.utils import get_openapi
 
 from backend.app.api import ping
 from backend.app.api import auth
 
 from backend.app.db.session import engine
-from backend.app.models import user, task, task_category, task_status, category, reminder, user_settings  # эти импорты нужны, чтобы модели были зарегистрированы
+from backend.app.models import user, task, task_category, task_status, category, reminder, user_settings, user_profile  # эти импорты нужны, чтобы модели были зарегистрированы
 from backend.app.db.base import Base
-
-
 
 # Удалить все таблицы
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
-
-
 
 app = FastAPI(
     title="Моя система задач",
@@ -35,8 +31,10 @@ app = FastAPI(
     ---
     
     ✨ Для примера вы можете использовать пользователя `testuser` с паролем `testpassword`.
-            Саша, если ты это читаешь, то ты - КРАСАВЧИК
+            АРТЕМИЙ КРАСАВЧИК. Безопасность на высшем уровне
     """)
+
+
 
 # Добавляем CORS middleware
 app.add_middleware(

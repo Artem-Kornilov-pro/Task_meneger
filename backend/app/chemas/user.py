@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, StringConstraints, ConfigDict, Field
 from typing import Optional
 from typing_extensions import Annotated  # важно для Pydantic v2
+from datetime import date
 
 # 💡 Используем Annotated + StringConstraints вместо устаревшего constr
 UsernameType = Annotated[str, StringConstraints(min_length=3, max_length=30)]
@@ -50,3 +51,5 @@ class UserOutMe(BaseModel):
     id: int = Field(..., example=1, title="User ID")
     email: EmailStr = Field(..., example="user@example.com", title="Email")
     username: str = Field(..., example="johndoe", title="Username")
+    class Config:
+        orm_mode = True

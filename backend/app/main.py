@@ -4,9 +4,10 @@ from fastapi.openapi.utils import get_openapi
 
 from backend.app.api import ping
 from backend.app.api import auth
+from backend.app.api import profile
 
 from backend.app.db.session import engine
-from backend.app.models import user, task, task_category, task_status, category, reminder, user_settings, user_profile  # эти импорты нужны, чтобы модели были зарегистрированы
+from backend.app.models import user, task, task_category, task_status, category, reminder, user_profile  # эти импорты нужны, чтобы модели были зарегистрированы
 from backend.app.db.base import Base
 
 # Удалить все таблицы
@@ -47,7 +48,7 @@ app.add_middleware(
 
 app.include_router(ping.router,prefix="/api/server", tags=["server"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-
+app.include_router(profile.router, prefix="/api", tags=["profile"])
 #Для запуска проекта использовать :  uvicorn backend.app.main:app --reload
 
 """# 1. Остановить все контейнеры

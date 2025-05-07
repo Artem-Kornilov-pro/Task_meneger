@@ -8,6 +8,8 @@ from jose import JWTError
 from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, LogInTokenResponse, TokenRequest
 from backend.app.chemas.user import AccessTokenResponse, RefreshTokenRequest, UserOutMe
 
+
+
 from backend.app.models.user import User
 from backend.app.models.user_profile import UserProfile
 from backend.app.db.session import get_db
@@ -196,7 +198,6 @@ def get_token(authorization: str = Header(...)):
     return authorization[7:]  # Возвращаем только сам токен без "Bearer "
 
 
-
 @router.get("/me",response_model=UserOutMe, summary="Информация о текущем пользователе")
 def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
@@ -220,4 +221,4 @@ def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
-    
+

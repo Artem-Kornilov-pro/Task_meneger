@@ -52,4 +52,18 @@ class UserOutMe(BaseModel):
     email: EmailStr = Field(..., example="user@example.com", title="Email")
     username: str = Field(..., example="johndoe", title="Username")
     class Config:
-        orm_mode = True
+        from_attributes = True  # <<< ВАЖНО
+
+class UserProfileCreate(BaseModel):
+    full_name: Optional[str] = Field(None, title="Full Name", example="John Doe")
+    gender: Optional[str] = Field(None, title="Gender", example="male")
+    birth_date: Optional[date] = Field(None, title="Date of Birth", example="1990-01-01")
+    location: Optional[str] = Field(None, title="Location", example="New York")
+    bio: Optional[str] = Field(None, title="Biography", example="Software engineer and musician.")
+
+class UserProfileUpdate(UserProfileCreate):
+    pass
+
+class UserProfileOut(UserProfileCreate):
+    user_id: int
+

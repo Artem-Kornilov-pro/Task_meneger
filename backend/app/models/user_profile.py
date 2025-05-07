@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base
 
@@ -13,5 +13,7 @@ class UserProfile(Base):
     birth_date = Column(Date, nullable=True)
     location = Column(String, nullable=True)
     bio = Column(String, nullable=True)
+    timezone = Column(String(50), default="UTC", nullable=True)
+    use_google_sync = Column(Boolean, default=False, nullable=True)
 
     user = relationship("User", back_populates="profile")

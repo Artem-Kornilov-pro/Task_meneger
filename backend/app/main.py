@@ -1,18 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 
 from backend.app.api import ping
 from backend.app.api import auth
 from backend.app.api import profile
+from backend.app.api import task as task_endpoints
 
 from backend.app.db.session import engine
 from backend.app.models import user, task, task_category, task_status, category, reminder, user_profile  # эти импорты нужны, чтобы модели были зарегистрированы
 from backend.app.db.base import Base
+from backend.app.db.init_db import initialize_task_statuses
 
 # Удалить все таблицы
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
+
+initialize_task_statuses() # заполняет таблицу статусов задач
+
 
 app = FastAPI(
     title="Моя система задач",
@@ -49,6 +53,8 @@ app.add_middleware(
 app.include_router(ping.router,prefix="/api/server", tags=["server"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(profile.router, prefix="/api", tags=["profile"])
+app.include_router(task_endpoints.router, prefix="/api/task", tags=["tasks"])
+
 #Для запуска проекта использовать :  uvicorn backend.app.main:app --reload
 
 """# 1. Остановить все контейнеры

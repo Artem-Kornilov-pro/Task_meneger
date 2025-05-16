@@ -1,27 +1,19 @@
 # app/api/v1/endpoints/auth.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordRequestForm
+
 from sqlalchemy.orm import Session
 from jose import JWTError
-from backend.app.chemas.user import UserCreate, UserOut, LoginRequest, LogInTokenResponse, TokenRequest
+from backend.app.chemas.user import UserCreate, UserOut, LogInTokenResponse, TokenRequest
 from backend.app.chemas.user import AccessTokenResponse, RefreshTokenRequest, UserOutMe
-
-
-
 from backend.app.models.user import User
-from backend.app.models.user_profile import UserProfile
-from backend.app.db.session import get_db
-from backend.app.core.security import hash_password, create_token, verify_password
-    
-from backend.app.core.redis_client import redis_client
-from backend.app.core.security import verify_token  # твоя функция для декодирования токена, нужна чтобы проверить токен
 
+from backend.app.db.session import get_db
+from backend.app.core.security import hash_password, create_token, verify_password, verify_token
+from backend.app.core.redis_client import redis_client
 from backend.app.core.dependencies import get_current_user
 
-# Описываем, что нам нужен токен через OAuth2
-#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # путь на получение токена можешь поставить любой
 
 
 router = APIRouter()
@@ -190,12 +182,6 @@ def refresh_access_token(data: RefreshTokenRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
-
-# Создаем зависимость для получения токена из заголовков
-def get_token(authorization: str = Header(...)):
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=400, detail="Invalid token format")
-    return authorization[7:]  # Возвращаем только сам токен без "Bearer "
 
 
 @router.get("/me",response_model=UserOutMe, summary="Информация о текущем пользователе")

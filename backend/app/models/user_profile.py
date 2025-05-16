@@ -1,9 +1,10 @@
+# app/models/user_profile.py
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base
 
 class UserProfile(Base):
-    __tablename__ = "user_profiles"
+    __tablename__ = "user_profile"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)

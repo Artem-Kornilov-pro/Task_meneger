@@ -1,3 +1,4 @@
+# /backend/app/models/reminder.py
 from sqlalchemy import Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base

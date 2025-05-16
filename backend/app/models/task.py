@@ -1,4 +1,4 @@
-# app/models/task.py
+# /backend/app/models/task.py
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base

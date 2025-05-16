@@ -1,4 +1,4 @@
-# app/models/task_category.py
+# /backend/app/models/task_category.py
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base

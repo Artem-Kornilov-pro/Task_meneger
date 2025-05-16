@@ -11,7 +11,6 @@ from backend.app.core.dependencies import get_current_user
 
 
 
-
 router = APIRouter()
 
 

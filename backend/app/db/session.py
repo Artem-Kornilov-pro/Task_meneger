@@ -1,4 +1,4 @@
-# app/db/session.py
+# /backend/app/db/session.py
 
 import os
 from sqlalchemy import create_engine
